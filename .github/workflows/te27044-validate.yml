@@ -1,0 +1,75 @@
+name: TE-27044 PR63 validate
+on: [push, workflow_dispatch]
+jobs:
+  ab:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node: [18, 22]
+        ref: [prod-4.0.13, 1d7b4dd67316b66b784bc0f601bdd9ae6e4f2789]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: LambdaTest/node-tunnel, ref: "${{ matrix.ref }}", path: sut, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: "${{ matrix.node }}" }
+      - name: install
+        working-directory: sut
+        run: npm install --omit=dev --no-audit --no-fund && node -p "'SUT version ' + require('./package.json').version"
+      - name: plain x20
+        working-directory: sut
+        continue-on-error: true
+        run: node ../qa/check-binary-spawn.js 20
+      - name: slow-close x10
+        working-directory: sut
+        continue-on-error: true
+        run: node -r ../qa/slow-close.js ../qa/check-binary-spawn.js 10
+  defender:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [prod-4.0.13, 1d7b4dd67316b66b784bc0f601bdd9ae6e4f2789]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: LambdaTest/node-tunnel, ref: "${{ matrix.ref }}", path: sut }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: try enable Defender real-time
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction Continue
+          Start-Sleep 5
+          Get-MpComputerStatus | Select-Object AMServiceEnabled,RealTimeProtectionEnabled,OnAccessProtectionEnabled | Format-List
+      - working-directory: sut
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: plain x30 (Defender attempt)
+        working-directory: sut
+        continue-on-error: true
+        run: node ../qa/check-binary-spawn.js 30
+  e2e:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      LT_USERNAME: ${{ secrets.LT_USERNAME }}
+      LT_ACCESS_KEY: ${{ secrets.LT_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: LambdaTest/node-tunnel, ref: 1d7b4dd67316b66b784bc0f601bdd9ae6e4f2789, path: sut }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - working-directory: sut
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Tunnel.start cold x3
+        if: env.LT_USERNAME != ''
+        working-directory: sut
+        shell: bash
+        run: |
+          for n in 1 2 3; do rm -rf "$USERPROFILE/.lambdatest" sut/.lambdatest 2>/dev/null; RUN_N=$n LT_FORCE_DOWNLOAD=1 node ../qa/e2e-start.js || exit 1; done
