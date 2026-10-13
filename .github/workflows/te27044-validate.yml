@@ -9,7 +9,7 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
         node: [18, 22]
-        ref: [prod-4.0.13, 1d7b4dd67316b66b784bc0f601bdd9ae6e4f2789]
+        ref: [prod-4.0.13, 01246cf36262996e43ecfc9170ebd9c2c1a50263]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ref: [prod-4.0.13, 1d7b4dd67316b66b784bc0f601bdd9ae6e4f2789]
+        ref: [prod-4.0.13, 01246cf36262996e43ecfc9170ebd9c2c1a50263]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
-        with: { repository: LambdaTest/node-tunnel, ref: 1d7b4dd67316b66b784bc0f601bdd9ae6e4f2789, path: sut }
+        with: { repository: LambdaTest/node-tunnel, ref: 01246cf36262996e43ecfc9170ebd9c2c1a50263, path: sut }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - working-directory: sut
